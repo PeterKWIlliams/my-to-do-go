@@ -10,13 +10,16 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/PeterKWIlliams/my-to-do-go/internal/commands"
+	"github.com/PeterKWIlliams/my-to-do-go/internal/database"
+	"github.com/PeterKWIlliams/my-to-do-go/internal/mytodo"
 )
 
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
-
 	projectRoot, err := getProjectRoot()
 	if err != nil {
 		log.Fatalf("Error getting project root: %v", err)
@@ -39,6 +42,22 @@ func main() {
 		log.Fatalf("Error pinging database: %v", err)
 	}
 	fmt.Println("Database file is located at:", DBFile)
+	dbQueries := database.New(db)
+
+	cfg := &mytodo.Config{
+		DB: dbQueries,
+	}
+	commands := commands.GetCommands()
+	arguments := os.Args[1:]
+	command, ok := commands[arguments[1]]
+	if !ok {
+		fmt.Println("command not found type help for a list of commands")
+		return
+	}
+	err = command.Callback(cfg, arguments[2:]...)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func getProjectRoot() (string, error) {
