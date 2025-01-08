@@ -2,5 +2,5 @@ mytodo
 my-to-do
 .env
 out
-.db
+*.db
 database/
