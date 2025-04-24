@@ -1,29 +1,48 @@
 package commands
 
+import (
+	"fmt"
 
-type db struct{
-  connecString string
+	"github.com/PeterKWIlliams/my-to-do-go/internal/service"
+)
+
+type CommandOptions map[string]CommandOption
+
+type CommandOption struct {
+	DefaultValue string
+	Required     func(*Context) bool
+	Validation   func(string) error
 }
 
-type config struct {
-  db *db
+type Command struct {
+	Help        string
+	Usage       string
+	Options     CommandOptions
+	SubCommands map[string]*Command
+	Execute     func(ctx *Context) error
 }
 
-type command struct {
-	help     string
-	callback func(*config, ...string)
+type Context struct {
+	Service *service.Service
+	Args    []string
+	Options map[string]string
+	Parent  *Context
 }
 
+func (c *Command) ValidateAndExectue(ctx *Context) error {
+	for key, opt := range c.Options {
 
+		value := ctx.Options[key]
 
-func getCommands() map[string]command {
-	return map[string]command{
-		"task": {
-			help:     "Use this command to interact with tasks\nUsage: todo task [OPTIONS]\nOptions\n",
-			callback: add,
-		},
-		"todos": {
-			help:     "Show a list of all todos",
-			callback: add,
-		},
+		if opt.Required(ctx) && value == "" {
+			return fmt.Errorf("required option %s not provided", key)
+		}
+		if opt.Validation != nil {
+			if err := opt.Validation(value); err != nil {
+				return fmt.Errorf("invalid value for option %s: %w", key, err)
+			}
+		}
+
+	}
+	return c.Execute(ctx)
 }

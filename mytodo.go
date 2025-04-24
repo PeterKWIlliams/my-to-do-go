@@ -10,24 +10,21 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
-
-	"github.com/PeterKWIlliams/my-to-do-go/internal/commands"
-	"github.com/PeterKWIlliams/my-to-do-go/internal/database"
-	"github.com/PeterKWIlliams/my-to-do-go/internal/mytodo"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
 	projectRoot, err := getProjectRoot()
 	if err != nil {
 		log.Fatalf("Error getting project root: %v", err)
 	}
 
-	DBENV := os.Getenv("DBNAME") + ".db"
-	DBFile := filepath.Join(projectRoot, DBENV)
+	envPath := filepath.Join(projectRoot, ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 
+	DBENV := os.Getenv("DBNAME")
+	DBFile := filepath.Join(projectRoot, DBENV+".db")
 	if _, err := os.Stat(DBFile); os.IsNotExist(err) {
 		log.Printf("Database file does not exist. It will be created: %v", DBFile)
 	}
@@ -42,22 +39,13 @@ func main() {
 		log.Fatalf("Error pinging database: %v", err)
 	}
 	fmt.Println("Database file is located at:", DBFile)
-	dbQueries := database.New(db)
+	// data comes in the form of
+	// mytodo project create myproject --directory=~/myproject --time=10
 
-	cfg := &mytodo.Config{
-		DB: dbQueries,
-	}
-	commands := commands.GetCommands()
-	arguments := os.Args[1:]
-	command, ok := commands[arguments[1]]
-	if !ok {
-		fmt.Println("command not found type help for a list of commands")
-		return
-	}
-	err = command.Callback(cfg, arguments[2:]...)
-	if err != nil {
-		fmt.Println(err)
-	}
+	// dbQueries := database.New(db)
+	// cfg := &config.Config{
+	// 	DB: dbQueries,
+	// }
 }
 
 func getProjectRoot() (string, error) {
